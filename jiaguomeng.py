@@ -261,11 +261,15 @@ print('总加成倍率：{:.2f}'.format(sum(priorities)))
 
 def getNext():
     print('==============')
-    Rec = results.get()
-    print('次优策略：', Rec.builds[0])
-    print('总加成倍率', np.round(sum(priorities), 2))
-    print('各建筑加成倍率', np.round(Rec.builds[1], 2))
-    print('升级优先级', np.round(priorities, 2))
+    layout, scores = results.get().builds
+    layout_list = [cell for row in layout for cell in row]
+    priorities = [x*startDict[star[layout_list[i]]] for i, x in enumerate(scores)]
+    printTable([
+        ['#'] + ['{}'.format(d) for d in range(9)],
+        ['次优策略'] + layout_list,
+        ['各建筑加成倍率'] + ['{:.2f}'.format(score) for score in scores],
+        ['升级优先级'] + ['{:.2f}'.format(priority) for priority in priorities],
+    ])
 
 if len(LastResult)==3:
     now_result=[list(item) for item in layout]
@@ -286,6 +290,7 @@ upgrade_order=argsort(priorities)[::-1]
 print('升级顺序:\n({})'.format(', '.join(
     layout_list[i] for i in upgrade_order
 )))
-for item in upgrade_order[:-1]:
-    print(item,',',sep='',end='')
-print(upgrade_order[-1],')',sep='')
+# print('(',end='')
+# for item in upgrade_order[:-1]:
+#     print(item,',',sep='',end='')
+# print(upgrade_order[-1],')',sep='')
