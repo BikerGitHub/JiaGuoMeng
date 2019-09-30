@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import json
 import itertools
+import unicodedata
 from queue import PriorityQueue as PQ
 
 #可选:将数据直接填在文件中
@@ -143,32 +144,32 @@ for key,value in Mission.items():
         start[key]*=1+value
 
 buffs_100 = {
-                '木屋': ['木材厂'],
-                '居民楼': ['便利店'],
-                '钢结构房': ['钢铁厂'],
-                '花园洋房': ['商贸中心'],
-                '空中别墅': ['民食斋'],
+    '木屋': ['木材厂'],
+    '居民楼': ['便利店'],
+    '钢结构房': ['钢铁厂'],
+    '花园洋房': ['商贸中心'],
+    '空中别墅': ['民食斋'],
+    '便利店': ['居民楼'],
+    '五金店': ['零件厂'],
+    '服装店': ['纺织厂'],
+    '菜市场': ['食品厂'],
+    '学校':  ['图书城'],
+    '图书城': ['学校', '造纸厂'],
+    '商贸中心': ['花园洋房'],
+    '木材厂': ['木屋'],
+    '食品厂': ['菜市场'],
+    '造纸厂': ['图书城'],
+    '钢铁厂': ['钢结构房'],
+    '纺织厂': ['服装店'],
+    '零件厂': ['五金店'],
+    '企鹅机械':['零件厂'],
+    '人民石油':['加油站'],
+}
 
-                '便利店': ['居民楼'],
-                '五金店': ['零件厂'],
-                '服装店': ['纺织厂'],
-                '菜市场': ['食品厂'],
-                '学校':  ['图书城'],
-                '图书城': ['学校', '造纸厂'],
-                '商贸中心': ['花园洋房'],
-
-                '木材厂': ['木屋'],
-                '食品厂': ['菜市场'],
-                '造纸厂': ['图书城'],
-                '钢铁厂': ['钢结构房'],
-                '纺织厂': ['服装店'],
-                '零件厂': ['五金店'],
-                '企鹅机械':['零件厂'],
-                '人民石油':['加油站']
-            }
-
-buffs_50 = {'零件厂': ['企鹅机械'],
-            '加油站':['人民石油']}
+buffs_50 = {
+    '零件厂': ['企鹅机械'],
+    '加油站': ['人民石油'],
+}
 
 def calculateComb(buildings):
     buildtuple = buildings[0] + buildings[1] + buildings[2]
@@ -231,29 +232,43 @@ if Mode=='Online' or Mode=='Offline':
                 LastTime=time.time()
             prod = calculateComb(search_space[index])
             results.put(Result(-prod[0], (search_space[index], prod[1])))
-        print()
 
-def list_round(x,n):
-    return [round(item,n) for item in x]
+def printTable(content):
+    def strwid(string):
+        return sum(
+            2 if unicodedata.east_asian_width(char) in {'W', 'F' and 'A'}
+            else 1
+            for char in string
+        )
+    widths = [max(strwid(cell) for cell in col) for col in zip(*content)]
+    for row in content:
+        printed_cells = (
+            ' ' * (width - strwid(cell)) + cell
+            for cell, width in zip(row, widths)
+        )
+        print(' | '.join(printed_cells))
 
-tuple2list=lambda x:[list(item) for item in x]
-print('==============')
-Rec = results.get()
-print('最优策略：', tuple2list(Rec.builds[0]))
-print('总加成倍率', round(sum([x*startDict[star[Rec.builds[0][i//3][i%3]]] for i, x in enumerate(Rec.builds[1])]), 2))
-print('各建筑加成倍率', list_round(Rec.builds[1], 2))
-print('升级优先级', list_round([x*startDict[star[Rec.builds[0][i//3][i%3]]] for i, x in enumerate(Rec.builds[1])], 2))
+layout, scores = results.get().builds
+layout_list = [cell for row in layout for cell in row]
+priorities = [x*startDict[star[layout_list[i]]] for i, x in enumerate(scores)]
+printTable([
+    ['#'] + ['{}'.format(d) for d in range(9)],
+    ['最优策略'] + layout_list,
+    ['各建筑加成倍率'] + ['{:.2f}'.format(score) for score in scores],
+    ['升级优先级'] + ['{:.2f}'.format(priority) for priority in priorities],
+])
+print('总加成倍率：{:.2f}'.format(sum(priorities)))
 
 def getNext():
     print('==============')
     Rec = results.get()
-    print('次优策略：', tuple2list(Rec.builds[0]))
-    print('总加成倍率', round(sum([x*startDict[star[Rec.builds[0][i//3][i%3]]] for i, x in enumerate(Rec.builds[1])]), 2))
-    print('各建筑加成倍率', list_round(Rec.builds[1], 2))
-    print('升级优先级', list_round([x*startDict[star[Rec.builds[0][i//3][i%3]]] for i, x in enumerate(Rec.builds[1])], 2))
+    print('次优策略：', Rec.builds[0])
+    print('总加成倍率', np.round(sum(priorities), 2))
+    print('各建筑加成倍率', np.round(Rec.builds[1], 2))
+    print('升级优先级', np.round(priorities, 2))
 
 if len(LastResult)==3:
-    now_result=tuple2list(Rec.builds[0])
+    now_result=[list(item) for item in layout]
     for class_num in range(3):
         for item in LastResult[class_num][:]:
             if item in now_result[class_num]:
@@ -267,8 +282,10 @@ def argsort(x):
     x=sorted(x,key=lambda x:x[1])
     x=[item[0] for item in x]
     return x
-upgrade_order=argsort([x*startDict[star[Rec.builds[0][i//3][i%3]]] for i, x in enumerate(Rec.builds[1])])[::-1]
-print('升级顺序:(',end='')
+upgrade_order=argsort(priorities)[::-1]
+print('升级顺序:\n({})'.format(', '.join(
+    layout_list[i] for i in upgrade_order
+)))
 for item in upgrade_order[:-1]:
     print(item,',',sep='',end='')
 print(upgrade_order[-1],')',sep='')
