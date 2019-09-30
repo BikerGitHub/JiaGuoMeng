@@ -4,6 +4,9 @@
 在线版：http://39.107.248.130:9100/ 来自nga[hello_bond1989]
 ## 使用方法
 
+### 依赖
+- python3
+- 可选tqdm库提供更好的进度条
 ### 参数输入的两种方式:
 - 写入到data.txt文件内
 - 写入到jiaguomeng.py开头JsonData={}中
